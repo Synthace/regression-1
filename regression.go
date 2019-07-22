@@ -18,7 +18,7 @@ var (
 
 type Regression struct {
 	names             describe
-	data              []*dataPoint
+	Data              []*dataPoint
 	coeff             map[int]float64
 	R2                float64
 	Varianceobserved  float64
@@ -42,7 +42,7 @@ type describe struct {
 }
 
 // DataPoints is a slice of *dataPoint .
-// This type allows for easier construction of training data points
+// This type allows for easier construction of training Data points
 type DataPoints []*dataPoint
 
 // Creates a new dataPoint
@@ -62,7 +62,7 @@ func (r *Regression) Predict(vars []float64) (float64, error) {
 	}
 
 	p := r.Coeff(0)
-	for j := 1; j < len(r.data[0].Variables)+1; j++ {
+	for j := 1; j < len(r.Data[0].Variables)+1; j++ {
 		p += r.Coeff(j) * vars[j-1]
 	}
 	return p, nil
@@ -96,25 +96,25 @@ func (r *Regression) GetVar(i int) string {
 	return x
 }
 
-// Registers a feature cross to be applied to the data points.
+// Registers a feature cross to be applied to the Data points.
 func (r *Regression) AddCross(cross featureCross) {
 	r.crosses = append(r.crosses, cross)
 }
 
-// Train the regression with some data points
+// Train the regression with some Data points
 func (r *Regression) Train(d ...*dataPoint) {
-	r.data = append(r.data, d...)
-	if len(r.data) > 2 {
+	r.Data = append(r.Data, d...)
+	if len(r.Data) > 2 {
 		r.initialised = true
 	}
 }
 
-// Apply any feature crosses, generating new observations and updating the data points, as well as
+// Apply any feature crosses, generating new observations and updating the Data points, as well as
 // populating variable names for the feature crosses.
 // this should only be run once, as part of Run().
 func (r *Regression) applyCrosses() {
-	unusedVariableIndexCursor := len(r.data[0].Variables)
-	for _, point := range r.data {
+	unusedVariableIndexCursor := len(r.Data[0].Variables)
+	for _, point := range r.Data {
 		for _, cross := range r.crosses {
 			point.Variables = append(point.Variables, cross.Calculate(point.Variables)...)
 		}
@@ -141,8 +141,8 @@ func (r *Regression) Run() error {
 	r.applyCrosses()
 	r.hasRun = true
 
-	observations := len(r.data)
-	numOfvars := len(r.data[0].Variables)
+	observations := len(r.Data)
+	numOfvars := len(r.Data[0].Variables)
 
 	if observations < (numOfvars + 1) {
 		return errTooManyvars
@@ -153,12 +153,12 @@ func (r *Regression) Run() error {
 	variables := mat.NewDense(observations, numOfvars+1, nil)
 
 	for i := 0; i < observations; i++ {
-		observed.Set(i, 0, r.data[i].Observed)
+		observed.Set(i, 0, r.Data[i].Observed)
 		for j := 0; j < numOfvars+1; j++ {
 			if j == 0 {
 				variables.Set(i, 0, 1)
 			} else {
-				variables.Set(i, j, r.data[i].Variables[j-1])
+				variables.Set(i, j, r.Data[i].Variables[j-1])
 			}
 		}
 	}
@@ -209,31 +209,31 @@ func (r *Regression) Coeff(i int) float64 {
 }
 
 func (r *Regression) calcPredicted() string {
-	observations := len(r.data)
+	observations := len(r.Data)
 	var predicted float64
 	var output string
 	for i := 0; i < observations; i++ {
-		r.data[i].Predicted, _ = r.Predict(r.data[i].Variables)
-		r.data[i].Error = r.data[i].Predicted - r.data[i].Observed
+		r.Data[i].Predicted, _ = r.Predict(r.Data[i].Variables)
+		r.Data[i].Error = r.Data[i].Predicted - r.Data[i].Observed
 
-		output += fmt.Sprintf("%v. observed = %v, Predicted = %v, Error = %v", i, r.data[i].Observed, predicted, r.data[i].Error)
+		output += fmt.Sprintf("%v. observed = %v, Predicted = %v, Error = %v", i, r.Data[i].Observed, predicted, r.Data[i].Error)
 	}
 	return output
 }
 
 func (r *Regression) calcVariance() string {
-	observations := len(r.data)
+	observations := len(r.Data)
 	var obtotal, prtotal, obvar, prvar float64
 	for i := 0; i < observations; i++ {
-		obtotal += r.data[i].Observed
-		prtotal += r.data[i].Predicted
+		obtotal += r.Data[i].Observed
+		prtotal += r.Data[i].Predicted
 	}
 	obaverage := obtotal / float64(observations)
 	praverage := prtotal / float64(observations)
 
 	for i := 0; i < observations; i++ {
-		obvar += math.Pow(r.data[i].Observed-obaverage, 2)
-		prvar += math.Pow(r.data[i].Predicted-praverage, 2)
+		obvar += math.Pow(r.Data[i].Observed-obaverage, 2)
+		prvar += math.Pow(r.Data[i].Predicted-praverage, 2)
 	}
 	r.Varianceobserved = obvar / float64(observations)
 	r.VariancePredicted = prvar / float64(observations)
@@ -247,7 +247,7 @@ func (r *Regression) calcR2() string {
 
 func (r *Regression) calcResiduals() string {
 	str := fmt.Sprintf("Residuals:\nobserved|\tPredicted|\tResidual\n")
-	for _, d := range r.data {
+	for _, d := range r.Data {
 		str += fmt.Sprintf("%.2f|\t%.2f|\t%.2f\n", d.Observed, d.Predicted, d.Observed-d.Predicted)
 	}
 	str += "\n"
@@ -273,11 +273,11 @@ func (r *Regression) String() string {
 		str += fmt.Sprintf("|\t%v", r.GetVar(i))
 	}
 	str += "\n"
-	for _, d := range r.data {
+	for _, d := range r.Data {
 		str += fmt.Sprintf("%v\n", d)
 	}
 	fmt.Println(r.calcResiduals())
-	str += fmt.Sprintf("\nN = %v\nVariance observed = %v\nVariance Predicted = %v", len(r.data), r.Varianceobserved, r.VariancePredicted)
+	str += fmt.Sprintf("\nN = %v\nVariance observed = %v\nVariance Predicted = %v", len(r.Data), r.Varianceobserved, r.VariancePredicted)
 	str += fmt.Sprintf("\nR2 = %v\n", r.R2)
 	return str
 }
